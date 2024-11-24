@@ -50,8 +50,6 @@ class Patcher:
             i: glob.glob(os.path.join(self.toolsDir, '*{}*'.format(i)))[0] for i in self.tools
         }
         
-        print("self.toolsDir: ",self.toolsDir.parent)
-
 
 
     @staticmethod
@@ -73,15 +71,20 @@ class Patcher:
     def Patch(self, srcPath, optionsPath = None):
         srcFile = os.path.basename(srcPath)
         outPath = os.path.join(self.outDir, self.outPrepend + srcFile)
-        youtube_path = r"C:\Users\Adrik13\Desktop\Revanced\youtube_19.43.41.apk"
         #optionsFile = optionsPath if optionsPath else os.path.splitext(Patcher.__normalFileName(srcFile))[0] + '.json'
         tempDir = os.path.join(tempfile.gettempdir(), 'revanced-resource-cache')
         print('### Patching {}...'.format(srcFile))
-        print
+        print("srcPath: ", srcPath)
 
         try:
-            subprocess.run(f"java -jar {self.toolPaths['cli']}  patch -p{ self.toolPaths['patches']} {youtube_path}", cwd=self.apks_patched_Dir)
+            subprocess.run(f'java -jar {self.toolPaths['cli']}  patch -p{ self.toolPaths['patches']} "{srcPath}"', cwd=self.apks_patched_Dir)
             print('### Finished patching {} successfully!'.format(os.path.abspath(outPath)))
+            print('### Deleting Temporal Files......')
+            for file in self.apks_patched_Dir.iterdir():
+                if file.is_dir():
+                    shutil.rmtree(file)
+                elif file.suffix == '.keystore':
+                    file.unlink()
         except subprocess.CalledProcessError:
             print('### Failed to patch {}!'.format(srcFile))
         try:
@@ -135,9 +138,7 @@ class Patcher:
                 [self.apkmdPath, configPath], cwd=self.apks_untoched_Dir,
                 stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                 check=True)
-            path = os.path.join(
-                tempfile.gettempdir(), apkmdConfig['apps'][0]['outFile'] + '.apk')
-            print("path: ",path)
+            path = Path(self.apks_untoched_Dir, apkmdConfig['apps'][0]['outFile'] + '.apk')
             if not Path(path).exists:
                 print('### Failed to find a correct version of {} or blocked by server!'.format(appId))
                 return None
@@ -225,8 +226,6 @@ class Patcher:
                     Patcher.__ensureDirectory(directory)
                     clearExistingTools(directory, assetName)
                     assetUrl = asset['browser_download_url']
-                    print("assetUrl:", assetUrl)
-                    print("assetPath: ", assetPath)
                     urllib.request.urlretrieve(assetUrl, assetPath)
 
 def main():
